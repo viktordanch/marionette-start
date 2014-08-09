@@ -9,13 +9,48 @@ ContactManager.module("ContactsApp.List", function(List, ContactManager, Backbon
             var contactsListLayout = new List.Layout();
             var contactsListPanel = new List.Panel();
 
-            $.when(fetchingContacts).done(function(contacts) {
+            $.when(fetchingContacts).done(function(contacts){
+//                var filteredContacts = ContactManager.Entities.FilteredCollection({
+//                        collection: contacts
+//                });
+
                 contactsListLayout.on("show", function(){
                     contactsListLayout.panelRegion.show(contactsListPanel);
                     contactsListLayout.contactsRegion.show(contactsListView);
                 });
 
+                contactsListPanel.on("contact:new", function(){
+                    var newContact = new ContactManager.Entities.Contact();
+
+                    var view = new ContactManager.ContactsApp.New.Contact({
+                        model: newContact
+                    });
+
+                    view.on("form:submit", function(data){
+                        var highestId = contacts.max(function(c){ return c.id; });
+                        highestId = highestId.get("id");
+                        data.id = highestId + 1;
+                        if(newContact.save(data)){
+                            contacts.add(newContact);
+                            view.trigger("dialog:close");
+                            contactsListView.children.findByModel(newContact).
+                                flash("success");
+                        }
+                        else{
+                            view.triggerMethod("form:data:invalid",
+                                newContact.validationError);
+                        }
+                    });
+
+                    ContactManager.dialogRegion.show(view);
+                });
+
+                contactsListPanel.on("contacts:filter", function(filterCriterion){
+                    filteredContacts.filter(filterCriterion);
+                });
+
                 var contactsListView = new List.Contacts({
+//                    collection: filteredContacts
                     collection: contacts
                 });
 
@@ -33,14 +68,13 @@ ContactManager.module("ContactsApp.List", function(List, ContactManager, Backbon
 
                 contactsListView.on("childview:contact:edit", function(childView, model){
                     var view = new ContactManager.ContactsApp.Edit.Contact({
-                        model: model,
-                        asModal: true
+                        model: model
                     });
 
                     view.on("form:submit", function(data){
                         if(model.save(data)){
                             childView.render();
-                            ContactManager.dialogRegion.reset();
+                            view.trigger("dialog:close");
                             childView.flash("success");
                         }
                         else{
@@ -50,6 +84,21 @@ ContactManager.module("ContactsApp.List", function(List, ContactManager, Backbon
 
                     ContactManager.dialogRegion.show(view);
                 });
+
+//                var filteredContacts = ContactManager.Entities.FilteredCollection({
+//                    collection: contacts,
+//                    filterFunction: function(filterCriterion){
+//                        var criterion = filterCriterion.toLowerCase();
+//                        return function(contact){
+//                            if(contact.get("firstName").toLowerCase().indexOf(criterion) !== -1
+//                                || contact.get("lastName").toLowerCase().indexOf(criterion) !== -1
+//                                || contact.get("phoneNumber").toLowerCase().
+//                                indexOf(criterion) !== -1){
+//                                return contact;
+//                            }
+//                        };
+//                    }
+//                });
 
 //                ContactManager.mainRegion.show(contactsListView);
                 ContactManager.mainRegion.show(contactsListLayout);

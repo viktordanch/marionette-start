@@ -9,7 +9,21 @@ ContactManager.module("ContactsApp.List", function(List, ContactManager, Backbon
     });
 
     List.Panel = Marionette.ItemView.extend({
-        template: "#contact-list-panel"
+        template: "#contact-list-panel",
+
+        triggers: {
+            "click button.js-new": "contact:new"
+        },
+
+        events: {
+            "submit #filter-form": "filterContacts"
+        },
+
+        filterContacts: function(e){
+            e.preventDefault();
+            var criterion = this.$(".js-filter-criterion").val();
+            this.trigger("contacts:filter", criterion);
+        }
     });
 
     List.Contact = Marionette.ItemView.extend({
@@ -69,6 +83,20 @@ ContactManager.module("ContactsApp.List", function(List, ContactManager, Backbon
         template: "#contact-list",
         childView: List.Contact,
         itemViewContainer: "tbody",
+
+        initialize: function(){
+            this.listenTo(this.collection, "reset", function(){
+                this.appendHtml = function(collectionView, itemView, index){
+                    collectionView.$el.append(itemView.el);
+                }
+            });
+        },
+
+        onCompositeCollectionRendered: function(){
+            this.appendHtml = function(collectionView, itemView, index){
+                collectionView.$el.prepend(itemView.el);
+            }
+        },
 
         onChildviewContactDelete: function(){
             this.$el.fadeOut(1000, function(){
